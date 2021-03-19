@@ -68,7 +68,7 @@ interface IUniswapV2Pair {
     function skim(address to) external;
     function sync() external;
 
-    function initialize(address, address) external;
+    function initialize(uint, address, address) external;
 }
 
 interface IUniswapV2ERC20 {
@@ -132,10 +132,9 @@ contract UniswapV2ERC20 is IUniswapV2ERC20 {
     event Transfer(address indexed from, address indexed to, uint value);
 
     constructor() public {
-        uint chainId;
-        assembly {
-            chainId := chainid
-        }
+    }
+
+    function init(uint chainId) public {
         DOMAIN_SEPARATOR = keccak256(
             abi.encode(
                 keccak256('EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)'),
@@ -258,10 +257,11 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     }
 
     // called once by the factory at time of deployment
-    function initialize(address _token0, address _token1) external {
+    function initialize(uint _chainId, address _token0, address _token1) external {
         require(msg.sender == factory, 'UniswapV2: FORBIDDEN'); // sufficient check
         token0 = _token0;
         token1 = _token1;
+        UniswapV2ERC20(address(this)).init(_chainId);
     }
 
     // update reserves and, on the first call per block, price accumulators
@@ -419,7 +419,7 @@ contract UniswapV2Factory is IUniswapV2Factory {
         require(getPair[token0][token1] == address(0), 'UniswapV2: PAIR_EXISTS'); // single check is sufficient
         UniswapV2Pair newPair = new UniswapV2Pair();
         pair = address(newPair);
-        IUniswapV2Pair(pair).initialize(token0, token1);
+        IUniswapV2Pair(pair).initialize(69, token0, token1);
         getPair[token0][token1] = pair;
         getPair[token1][token0] = pair; // populate mapping in the reverse direction
         allPairs.push(pair);

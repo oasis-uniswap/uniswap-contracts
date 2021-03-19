@@ -743,7 +743,7 @@ require(token0 != address(0), 'UniswapV2Library: ZERO_ADDRESS');
 }
 
 // calculates the CREATE2 address for a pair without making any external calls
-function pairFor(address factory, address tokenA, address tokenB) internal pure returns (address pair) {
+function pairFor(address factory, address tokenA, address tokenB) internal view returns (address pair) {
     pair = IUniswapV2Factory(factory).getPair(tokenA, tokenB);
 }
 
