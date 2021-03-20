@@ -2,7 +2,7 @@
  *Submitted for verification at Etherscan.io on 2020-05-04
 */
 
-pragma solidity =0.5.16;
+pragma solidity ^0.6.2;
 
 interface IUniswapV2Factory {
     event PairCreated(address indexed token0, address indexed token1, address pair, uint);
@@ -398,7 +398,6 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
 contract UniswapV2Factory is IUniswapV2Factory {
     address public feeTo;
     address public feeToSetter;
-    bytes32 public initCodeHash;
 
     mapping(address => mapping(address => address)) public getPair;
     address[] public allPairs;
@@ -407,7 +406,6 @@ contract UniswapV2Factory is IUniswapV2Factory {
 
     constructor(address _feeToSetter) public {
         feeToSetter = _feeToSetter;
-        initCodeHash = keccak256(abi.encodePacked(type(UniswapV2Pair).creationCode));
     }
 
     function allPairsLength() external view returns (uint) {
@@ -419,11 +417,9 @@ contract UniswapV2Factory is IUniswapV2Factory {
         (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
         require(token0 != address(0), 'UniswapV2: ZERO_ADDRESS');
         require(getPair[token0][token1] == address(0), 'UniswapV2: PAIR_EXISTS'); // single check is sufficient
-        bytes memory bytecode = type(UniswapV2Pair).creationCode;
         bytes32 salt = keccak256(abi.encodePacked(token0, token1));
-        assembly {
-            pair := create2(0, add(bytecode, 32), mload(bytecode), salt)
-        }
+        UniswapV2Pair newPair = new UniswapV2Pair{salt: salt}();
+        pair = address(newPair);
         IUniswapV2Pair(pair).initialize(token0, token1);
         getPair[token0][token1] = pair;
         getPair[token1][token0] = pair; // populate mapping in the reverse direction
@@ -496,5 +492,23 @@ library UQ112x112 {
     // divide a UQ112x112 by a uint112, returning a UQ112x112
     function uqdiv(uint224 x, uint112 y) internal pure returns (uint224 z) {
         z = x / uint224(y);
+    }
+}
+
+contract ContractFactory {
+    mapping(address => mapping(address => address)) public getPair;
+    function newPair(address tokenA, address tokenB) external returns (address pair) {
+        require(tokenA != tokenB, 'UniswapV2: IDENTICAL_ADDRESSES');
+        (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
+        require(token0 != address(0), 'UniswapV2: ZERO_ADDRESS');
+        require(getPair[token0][token1] == address(0), 'UniswapV2: PAIR_EXISTS'); // single check is sufficient
+        bytes32 salt = keccak256(abi.encodePacked(token0, token1));
+        UniswapV2Pair newPair = new UniswapV2Pair{salt: salt}();
+        pair = address(newPair);
+        IUniswapV2Pair(pair).initialize(token0, token1);
+    }
+
+    function createPair(address factory, address tokenA, address tokenB) external returns (address pair) {
+        pair = IUniswapV2Factory(factory).createPair(tokenA, tokenB);
     }
 }
